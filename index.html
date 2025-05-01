@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planner Mai 2025</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007BFF">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+    }
+    .day-container {
+      margin-bottom: 30px;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .task {
+      margin-top: 5px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .task span {
+      flex: 1;
+    }
+    .task button {
+      background: transparent;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .task-input {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .task-input input[type="text"] {
+      flex: 1;
+      padding: 5px;
+    }
+    .task-list {
+      margin-top: 10px;
+    }
+    .date-title {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Planner - Mai 2025</h1>
+  <div id="planner"></div>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('Service Worker enregistré', reg))
+        .catch(err => console.error('Erreur SW', err));
+    }
+
+    const startDate = new Date("2025-05-02");
+    const endDate = new Date("2025-05-27");
+    const plannerDiv = document.getElementById("planner");
+    const colors = ["#007BFF", "#28A745", "#FFC107", "#DC3545", "#6F42C1", "#20C997"];
+
+    function formatDate(date) {
+      return date.toISOString().split("T")[0];
+    }
+
+    function saveTasks(dateStr, tasks) {
+      localStorage.setItem("tasks-" + dateStr, JSON.stringify(tasks));
+    }
+
+    function loadTasks(dateStr) {
+      const saved = localStorage.getItem("tasks-" + dateStr);
+      return saved ? JSON.parse(saved) : [];
+    }
+
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = formatDate(d);
+      const dayContainer = document.createElement("div");
+      dayContainer.className = "day-container";
+
+      const dateTitle = document.createElement("div");
+      dateTitle.className = "date-title";
+      dateTitle.textContent = new Date(d).toLocaleDateString("fr-FR", {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+
+      const taskList = document.createElement("div");
+      taskList.className = "task-list";
+
+      const inputDiv = document.createElement("div");
+      inputDiv.className = "task-input";
+
+      const taskInput = document.createElement("input");
+      taskInput.type = "text";
+      taskInput.placeholder = "Ajouter une tâche...";
+
+      const colorSelect = document.createElement("select");
+      for (const color of colors) {
+        const opt = document.createElement("option");
+        opt.value = color;
+        opt.textContent = color;
+        opt.style.backgroundColor = color;
+        colorSelect.appendChild(opt);
+      }
+
+      const addButton = document.createElement("button");
+      addButton.textContent = "+";
+      addButton.onclick = () => {
+        if (taskInput.value.trim()) {
+          const taskObj = { text: taskInput.value, color: colorSelect.value };
+          const tasks = loadTasks(dateStr);
+          tasks.push(taskObj);
+          saveTasks(dateStr, tasks);
+          renderTasks(dateStr, taskList);
+          taskInput.value = "";
+        }
+      };
+
+      inputDiv.appendChild(taskInput);
+      inputDiv.appendChild(colorSelect);
+      inputDiv.appendChild(addButton);
+
+      function renderTasks(dateStr, container) {
+        container.innerHTML = "";
+        const tasks = loadTasks(dateStr);
+        tasks.forEach((task, index) => {
+          const taskEl = document.createElement("div");
+          taskEl.className = "task";
+          taskEl.style.backgroundColor = task.color;
+
+          const textSpan = document.createElement("span");
+          textSpan.textContent = task.text;
+          textSpan.contentEditable = true;
+          textSpan.onblur = () => {
+            tasks[index].text = textSpan.textContent;
+            saveTasks(dateStr, tasks);
+          };
+
+          const deleteBtn = document.createElement("button");
+          deleteBtn.textContent = "×";
+          deleteBtn.onclick = () => {
+            tasks.splice(index, 1);
+            saveTasks(dateStr, tasks);
+            renderTasks(dateStr, container);
+          };
+
+          taskEl.appendChild(textSpan);
+          taskEl.appendChild(deleteBtn);
+          container.appendChild(taskEl);
+        });
+      }
+
+      renderTasks(dateStr, taskList);
+
+      dayContainer.appendChild(dateTitle);
+      dayContainer.appendChild(taskList);
+      dayContainer.appendChild(inputDiv);
+      plannerDiv.appendChild(dayContainer);
+    }
+  </script>
+</body>
+</html>
